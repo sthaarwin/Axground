@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Eye, Filter, Download } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function WatchlistPage() {
     const stocks = [
