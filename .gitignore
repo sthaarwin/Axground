@@ -3,3 +3,5 @@
 .mcp.json
 .venv
 scraper
+test_scraper.py
+scheduler.py
