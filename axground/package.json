@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ci-install": "npm ci --prefer-offline --no-audit --silent",
+    "docker-build": "docker build -t axground-frontend ."
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

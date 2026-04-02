@@ -3,5 +3,14 @@
 .mcp.json
 .venv
 scraper
-test_scraper.py
-scheduler.py
+scripts/
+__pycache__
+axground/node_modules/
+axground/.next/
+axground/.env
+*.json
+!axground/package.json
+!axground/tsconfig.json
+!axground/next.config.js
+!market-data.json
+axground/public/market-data.json

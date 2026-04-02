@@ -18,21 +18,37 @@ import {
   Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface MarketData {
   summary: Array<{ detail: string, value: number }>;
-  top_gainers: Array<{ symbol: string, securityName: string, ltp: number, percentageChange: number }>;
-  nepse_index?: [number, number];
+  top_gainers: MarketAsset[];
+  top_losers?: MarketAsset[];
+  indices?: Record<string, { index: string, currentVal: number, pctChange: number }>;
+  nepse_index_full?: { index: string, currentVal: number, pctChange: number };
+  is_market_open?: boolean;
   news?: {
     exchangeMessages?: Array<{ messageTitle: string, addedDate: string }>;
     companyNews?: Array<{ newsHeadline: string, addedDate: string }>;
+    merolagani?: Array<{ title: string, url: string, date: string, source: string }>;
   };
   last_updated?: string;
+  last_updated_date?: string;
+}
+
+interface MarketAsset {
+  symbol: string;
+  securityName?: string;
+  ltp: number;
+  percentageChange: number;
 }
 
 export default function Dashboard() {
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gainerToggle, setGainerToggle] = useState<"gainers" | "losers">("gainers");
+  const [selectedNews, setSelectedNews] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,28 +66,44 @@ export default function Dashboard() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Check every 30s
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
   // Consolidate news
   const newsList = [
-    ...(data?.news?.companyNews?.map(n => ({ title: n.newsHeadline, date: n.addedDate })) || []),
-    ...(data?.news?.exchangeMessages?.map(n => ({ title: n.messageTitle, date: n.addedDate })) || [])
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    ...(data?.news?.companyNews?.map(n => ({ title: n.newsHeadline, date: n.addedDate || "", source: "NEPSE", url: "#" })) || []),
+    ...(data?.news?.exchangeMessages?.map(n => ({ title: n.messageTitle, date: n.addedDate || "", source: "NEPSE", url: "#" })) || []),
+    ...(data?.news?.merolagani?.map(n => ({ ...n, source: "Mero Lagani" })) || [])
+  ].sort((a, b) => {
+    const dateA = a.date || "Just now";
+    const dateB = b.date || "Just now";
+    const isUrgentA = dateA.toLowerCase().includes("now") || dateA.toLowerCase().includes("today");
+    const isUrgentB = dateB.toLowerCase().includes("now") || dateB.toLowerCase().includes("today");
+    if (isUrgentA && !isUrgentB) return -1;
+    if (!isUrgentA && isUrgentB) return 1;
+    if (isUrgentA && isUrgentB) return 0;
+    const timeA = new Date(dateA).getTime();
+    const timeB = new Date(dateB).getTime();
+    if (isNaN(timeA) && !isNaN(timeB)) return 1;
+    if (!isNaN(timeA) && isNaN(timeB)) return -1;
+    return timeB - timeA;
+  });
 
   const displayNews = newsList.length > 0 ? newsList : [
-    { title: "Market experiencing high volatility across sectors.", date: "Recently" },
-    { title: "Policy updates from SEBON expected next week.", date: "1h ago" },
+    { title: "Market experiencing high volatility across sectors.", date: "Recently", source: "System", url: "#" },
+    { title: "Policy updates from SEBON expected next week.", date: "1h ago", source: "System", url: "#" },
   ];
 
   // Helper to find summary value
   const getSummaryValue = (detail: string) => {
-    return data?.summary.find(s => s.detail.includes(detail))?.value || 0;
+    return data?.summary?.find(s => s.detail.includes(detail))?.value || 0;
   };
 
-  const nepseIndexValue = data?.nepse_index?.[1] || 2045.63;
-  const lastUpdatedTime = data?.last_updated || "Live";
+  const nepseIndexValue = data?.nepse_index_full?.currentVal || 2045.63;
+  const nepseChange = data?.nepse_index_full?.pctChange || 0;
+  const lastUpdatedTime = data?.last_updated || "Syncing...";
+  const isMarketOpen = data?.is_market_open ?? false;
 
   return (
     <AppLayout>
@@ -170,29 +202,30 @@ export default function Dashboard() {
                 <CardHeader className="pb-4 border-b border-border/50">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold flex items-center">
-                      <TrendingUp className="h-5 w-5 mr-3 text-emerald-500" />
-                      Top Gainers
+                      <TrendingUp className={cn("h-5 w-5 mr-3 transition-colors", gainerToggle === "gainers" ? "text-emerald-500" : "text-red-500")} />
+                      {gainerToggle === "gainers" ? "Top Gainers" : "Top Losers"}
                     </CardTitle>
-                    <Button variant="link" size="sm" className="text-xs font-bold text-primary group-hover:underline">
-                      View All <ChevronRight className="h-3 w-3 ml-1" />
-                    </Button>
+                    <Tabs value={gainerToggle} onValueChange={(v) => setGainerToggle(v as any)} className="w-[120px]">
+                      <TabsList className="h-8 p-1 bg-muted-foreground/10 rounded-xl w-full">
+                        <TabsTrigger value="gainers" className="h-6 text-[10px] uppercase font-black rounded-lg px-2 flex-1 data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Up</TabsTrigger>
+                        <TabsTrigger value="losers" className="h-6 text-[10px] uppercase font-black rounded-lg px-2 flex-1 data-[state=active]:bg-red-500 data-[state=active]:text-white">Down</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="divide-y divide-border/50">
-                    {(data?.top_gainers || [
-                      { symbol: "SABBL", securityName: "Salapa Bikas Bank", ltp: 707.1, percentageChange: 9.99 },
-                      { symbol: "PMHPL", securityName: "Panchakanya Mai Hydro", ltp: 389.0, percentageChange: 9.89 },
-                      { symbol: "RSML", securityName: "Reliance Spinning Mills", ltp: 685.5, percentageChange: 9.82 },
-                    ]).slice(0, 3).map((item) => (
-                      <div key={item.symbol} className="flex items-center justify-between p-5 hover:bg-accent/50 transition-colors cursor-pointer group/item">
+                    {(gainerToggle === "gainers" ? (data?.top_gainers || []) : (data?.top_losers || [])).slice(0, 3).map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-5 hover:bg-accent/50 transition-colors cursor-pointer group/item">
                         <div className="flex flex-col">
                           <span className="font-black text-sm tracking-tight group-hover/item:text-primary transition-colors">{item.symbol}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase truncate max-w-[120px]">{item.securityName}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase truncate max-w-[120px]">{item.securityName || "Listed Co."}</span>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-bold">रू {item.ltp}</div>
-                          <div className={`text-xs font-black text-emerald-500`}>+{item.percentageChange}%</div>
+                          <div className="text-sm font-bold tabular-nums">रू {(item?.ltp || 0).toLocaleString()}</div>
+                          <div className={cn("text-xs font-black tabular-nums", (item?.percentageChange || 0) >= 0 ? "text-emerald-500" : "text-red-500")}>
+                            {(item?.percentageChange || 0) >= 0 ? "+" : ""}{(item?.percentageChange || 0).toFixed(2)}%
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -208,24 +241,78 @@ export default function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="space-y-6">
-                    {displayNews.slice(0, 2).map((item: any, i: number) => (
-                      <div key={i} className="flex gap-4 group/news cursor-pointer">
-                        <div className={`size-12 rounded-xl border border-border/50 bg-primary/20 flex-shrink-0 relative overflow-hidden flex items-center justify-center`}>
-                           <Activity className="h-6 w-6 text-primary/40" />
+                    <div className="space-y-6">
+                      {displayNews.slice(0, 6).map((item: any, i: number) => (
+                        <div 
+                          key={i} 
+                          className="flex gap-4 group/news cursor-pointer"
+                          onClick={() => setSelectedNews(item)}
+                        >
+                          <div className={`size-12 rounded-xl border border-border/50 bg-primary/20 flex-shrink-0 relative overflow-hidden flex items-center justify-center transition-transform group-hover/news:scale-110`}>
+                            <Activity className="h-6 w-6 text-primary/40" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold leading-tight group-hover/news:text-primary transition-colors line-clamp-2">{item.title}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black uppercase px-2 py-0 h-4">
+                                {item.source}
+                              </Badge>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase">{item.date}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold leading-tight group-hover/news:text-primary transition-colors">{item.title}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1.5 flex items-center">
-                            <Clock className="h-3 w-3 mr-1.5" />
-                            {item.date.includes("T") ? new Date(item.date).toLocaleDateString() : item.date}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
                 </CardContent>
               </Card>
+
+              {/* News Drawer Overlay */}
+              {selectedNews && (
+                <div className="fixed inset-0 z-[100] flex justify-end">
+                  <div 
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                    onClick={() => setSelectedNews(null)}
+                  />
+                  <div className="relative w-full max-w-md bg-card/95 border-l border-white/5 backdrop-blur-xl h-full shadow-2xl animate-in slide-in-from-right duration-300">
+                    <div className="p-8 flex flex-col h-full bg-slate-950/20">
+                      <div className="flex justify-between items-center mb-10">
+                        <Badge className="bg-primary text-white font-black px-4 py-1 h-7 text-[10px] uppercase tracking-widest">{selectedNews.source}</Badge>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="rounded-full hover:bg-white/5"
+                          onClick={() => setSelectedNews(null)}
+                        >
+                           <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      <div className="flex-1">
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 block">{selectedNews.date}</span>
+                        <h2 className="text-2xl font-black leading-tight tracking-tight mb-8">{selectedNews.title}</h2>
+                        
+                        <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            This news article was synchronized from {selectedNews.source} platform. For full coverage and related analysis, please visit the official provider.
+                          </p>
+                          <Button 
+                            className="w-full h-12 rounded-xl font-bold gap-2 text-xs uppercase"
+                            asChild
+                          >
+                            <a href={selectedNews.url} target="_blank" rel="noopener noreferrer">
+                              Read Full Article <ArrowUpRight className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="mt-auto pt-8 border-t border-white/5 text-center">
+                        <p className="text-[10px] font-black uppercase text-white/40 tracking-[0.3em]">Axground Intelligence Feed</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -292,6 +379,25 @@ export default function Dashboard() {
                   <span className="text-emerald-400">{lastUpdatedTime}</span>
                 </div>
               </div>
+            </div>
+          </div>
+          {/* Sector Performance Grid */}
+          <div className="mt-8">
+            <h3 className="text-xs font-black tracking-[0.2em] uppercase text-muted-foreground mb-4 px-2">Sector Performance</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              {Object.entries(data?.indices || {}).filter(([_, v]) =>
+                v?.index && ["Banking", "Hydro Power", "Development Bank", "Finance", "Microfinance", "Others"].some(s => v.index.includes(s))
+              ).map(([id, val], i) => (
+                <div key={id} className="p-3 rounded-xl bg-card/40 border border-white/5 backdrop-blur-sm flex flex-col gap-1 transition-all hover:bg-white/5 cursor-default group">
+                  <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.1em] truncate group-hover:text-primary transition-colors">{(val?.index || "Sector").replace(" Index", "")}</p>
+                  <div className="flex items-end justify-between gap-2">
+                    <p className="text-xs font-black tabular-nums truncate">{(val?.currentVal || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</p>
+                    <p className={cn("text-[9px] font-black tabular-nums shrink-0", (val?.pctChange || 0) >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      {(val?.pctChange || 0) >= 0 ? "+" : ""}{(val?.pctChange || 0).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
