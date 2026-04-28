@@ -9,14 +9,14 @@ export default function ComparisonPage() {
     return (
         <AppLayout>
             <div className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Model Strategy Comparison</h2>
-                        <p className="text-muted-foreground">Comparative analysis of RL architectures on NEPSE datasets.</p>
+                        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Model Strategy Comparison</h2>
+                        <p className="text-sm sm:text-base text-muted-foreground mt-1">Comparative analysis of RL architectures on NEPSE datasets.</p>
                     </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-                        <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Export</Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" className="flex-1 md:flex-none"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+                        <Button variant="outline" className="flex-1 md:flex-none"><Download className="mr-2 h-4 w-4" /> Export</Button>
                     </div>
                 </div>
 
@@ -26,8 +26,8 @@ export default function ComparisonPage() {
                             <CardTitle>Strategy Matrix</CardTitle>
                             <CardDescription>Performance metrics across different RL algorithms and market conditions.</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <Table>
+                        <CardContent className="overflow-x-auto">
+                            <Table className="min-w-[600px]">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Strategy / Model</TableHead>

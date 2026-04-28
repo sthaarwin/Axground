@@ -35,8 +35,8 @@ export function Sidebar() {
     const pathname = usePathname();
 
     return (
-        <div className="flex flex-col w-72 border-r bg-card h-screen sticky top-0 overflow-y-auto hidden md:flex">
-            <div className="p-6">
+        <div className="flex flex-col w-72 border-r bg-card h-full min-h-screen sticky top-0 overflow-y-auto">
+            <div className="p-6 hidden md:block">
                 <h1 className="text-2xl font-black tracking-tighter text-primary">AXGROUND</h1>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-1">NEPSE Intelligence</p>
             </div>

@@ -1,7 +1,7 @@
 .agents
 .env
 .mcp.json
-.venv
+venv
 scraper
 scripts/
 __pycache__
@@ -13,4 +13,3 @@ axground/.env
 !axground/tsconfig.json
 !axground/next.config.js
 !market-data.json
-axground/public/market-data.json

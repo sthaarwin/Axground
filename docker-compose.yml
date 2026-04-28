@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  frontend:
+    image: axground-frontend
+    build:
+      context: ./axground
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  scraper:
+    image: axground-scraper
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["python", "scripts/test_scraper.py"]
