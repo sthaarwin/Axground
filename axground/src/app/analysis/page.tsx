@@ -7,51 +7,45 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CandlestickChart } from "@/components/candlestick-chart";
 import { Loader2 } from "lucide-react";
 
-// Generate dummy candlestick data for demonstration
-function generateDummyData(length: number) {
-    const data = [];
-    let currentDate = new Date(Date.now() - length * 24 * 60 * 60 * 1000);
-    let currentPrice = 1200;
-
-    for (let i = 0; i < length; i++) {
-        const volatility = currentPrice * 0.02;
-        const open = currentPrice + (Math.random() - 0.5) * volatility;
-        const close = open + (Math.random() - 0.5) * volatility;
-        const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-        const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-        
-        data.push({
-            time: currentDate.toISOString().split("T")[0],
-            open: parseFloat(open.toFixed(2)),
-            high: parseFloat(high.toFixed(2)),
-            low: parseFloat(low.toFixed(2)),
-            close: parseFloat(close.toFixed(2)),
-        });
-
-        currentPrice = close;
-        currentDate.setDate(currentDate.getDate() + 1);
-        
-        // Skip weekends
-        if (currentDate.getDay() === 6) currentDate.setDate(currentDate.getDate() + 2);
-    }
-    return data;
-}
-
 export default function AnalysisPage() {
     const [chartData, setChartData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [symbol, setSymbol] = useState("NABIL");
+    const [resolution, setResolution] = useState("1D");
 
     useEffect(() => {
-        setIsLoading(true);
-        // Simulate API fetch delay
-        const timer = setTimeout(() => {
-            setChartData(generateDummyData(100)); // Generate 100 days of history
-            setIsLoading(false);
-        }, 500);
+        const fetchHistory = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch data from our newly created internal API proxy
+                const response = await fetch(`/api/history?symbol=${symbol}&resolution=${resolution}`);
+                if (!response.ok) {
+                    console.error("Failed to fetch data");
+                } else {
+                    const data = await response.json();
+                    
+                    // Filter out duplicates that might occur due to time zone differences if using raw strings from TV API
+                    // The API route handles formatting it perfectly to YYYY-MM-DD
+                    const uniqueData = Array.from(new Map(data.map((item: any) => [item.time, item])).values());
+                    
+                    // Sort chronologically ascending
+                    uniqueData.sort((a: any, b: any) => {
+                        const timeA = typeof a.time === 'string' ? new Date(a.time).getTime() : a.time;
+                        const timeB = typeof b.time === 'string' ? new Date(b.time).getTime() : b.time;
+                        return timeA - timeB;
+                    });
+                    
+                    setChartData(uniqueData);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-        return () => clearTimeout(timer);
-    }, [symbol]);
+        fetchHistory();
+    }, [symbol, resolution]);
 
     return (
         <AppLayout>
@@ -126,9 +120,9 @@ export default function AnalysisPage() {
                                 <option value="NMB">NMB - NMB Bank Limited</option>
                                 <option value="SIFC">SIFC - Shree Investment Finance</option>
                             </select>
-                            <Tabs defaultValue="1D" className="w-full sm:w-[200px]">
+                            <Tabs value={resolution} onValueChange={setResolution} className="w-full sm:w-[200px]">
                                 <TabsList className="grid w-full grid-cols-4">
-                                    <TabsTrigger value="1H">1H</TabsTrigger>
+                                    <TabsTrigger value="60">1H</TabsTrigger>
                                     <TabsTrigger value="1D">1D</TabsTrigger>
                                     <TabsTrigger value="1W">1W</TabsTrigger>
                                     <TabsTrigger value="1M">1M</TabsTrigger>
