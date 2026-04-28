@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 function generateFallbackData(symbol: string, resolution: string) {
     // Generates mathematically sound logical dummy data for Cloudflare 403 blocks
@@ -40,6 +42,23 @@ export async function GET(request: Request) {
 
     if (!symbol) {
         return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
+    }
+
+    try {
+        // Try reading from the offline Python-scraper output first
+        const localPath = path.join(process.cwd(), 'public', 'history-data.json');
+        if (fs.existsSync(localPath)) {
+            const rawData = fs.readFileSync(localPath, 'utf8');
+            const allHistory = JSON.parse(rawData);
+            
+            if (allHistory[symbol]) {
+                console.log(`Serving real historic data for ${symbol} from local JSON store.`);
+                // For simplified timeframes (not intraday) return exactly as the Python script saved it
+                return NextResponse.json(allHistory[symbol]);
+            }
+        }
+    } catch (err) {
+        console.error("Local history error:", err);
     }
 
     // Default fetch range: roughly the last 5 years from now
