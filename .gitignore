@@ -13,3 +13,5 @@ axground/.env
 !axground/tsconfig.json
 !axground/next.config.js
 !market-data.json
+constraints.md
+ppo_nepse_agent.zip

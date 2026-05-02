@@ -21,13 +21,13 @@ const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Watchlist", href: "/watchlist", icon: ListMusic },
     { name: "Model Training", href: "/training", icon: Cpu },
-    { name: "Portfolio Management", href: "/portfolio", icon: Briefcase },
+    { name: "Backtesting", href: "/backtesting", icon: Briefcase },
 ];
 
 const analysisLinks = [
     { name: "Market Data", href: "/data", icon: TrendingUp },
     { name: "ML Models", href: "/models", icon: BarChart3 },
-    { name: "Portfolio", href: "/portfolio", icon: Briefcase },
+    { name: "Backtesting", href: "/backtesting", icon: Briefcase },
     { name: "Analysis", href: "/analysis", icon: PieChart },
 ];
 
