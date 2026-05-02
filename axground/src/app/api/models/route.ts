@@ -1,27 +1,40 @@
 import { NextResponse } from 'next/server';
-import { readdirSync, existsSync, statSync, unlinkSync } from 'fs';
+import { readdirSync, existsSync, statSync, unlinkSync, readFileSync } from 'fs';
 import path from 'path';
 
 export async function GET(request: Request) {
     try {
         const baseDir = path.resolve(process.cwd(), '..');
-        const modelsDir = baseDir;
+        const modelFiles = ['ppo_nepse_agent.zip'];
         
         const models: any[] = [];
         
-        // Check for trained model files
-        const modelFiles = ['ppo_nepse_agent.zip'];
-        
         for (const file of modelFiles) {
-            const modelPath = path.join(modelsDir, file);
+            const modelPath = path.join(baseDir, file);
             if (existsSync(modelPath)) {
                 const stats = statSync(modelPath);
+                
+                // Try to read training logs for reward info
+                const logPath = path.join(baseDir, 'axground', 'public', 'training-logs.json');
+                let finalReward = 0;
+                let episodes = 0;
+                let symbol = 'NIMB';
+                
+                if (existsSync(logPath)) {
+                    try {
+                        const logData = JSON.parse(readFileSync(logPath, 'utf8'));
+                        finalReward = logData.meanReward || 0;
+                        episodes = logData.episodes || 30000;
+                        symbol = logData.symbol || 'AUTO';
+                    } catch (e) {}
+                }
+                
                 models.push({
                     name: file.replace('.zip', ''),
                     created: stats.mtime.toISOString().split('T')[0],
-                    episodes: 30000,
-                    symbol: 'AUTO',
-                    finalReward: 0,
+                    episodes: episodes,
+                    symbol: symbol,
+                    finalReward: finalReward,
                     status: 'trained'
                 });
             }

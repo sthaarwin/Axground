@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
+import { writeFileSync, existsSync } from 'fs';
 import path from 'path';
 
 const PYTHON = '/home/arwin/codes/projects/Axground/venv/bin/python';
@@ -15,6 +16,16 @@ export async function POST(request: Request) {
         if (action === 'train') {
             command = `${PYTHON} ${SCRIPTS_DIR}/train_agent.py`;
         } else if (action === 'backtest') {
+            // Clear old trades before backtest
+            const baseDir = path.resolve(process.cwd(), '..');
+            const tradePath = path.join(baseDir, 'axground', 'public', 'trade-history.json');
+            const logPath = path.join(baseDir, 'axground', 'public', 'training-logs.json');
+            
+            // Clear trade history to start fresh
+            if (existsSync(tradePath)) {
+                writeFileSync(tradePath, '[]');
+            }
+            
             command = `${PYTHON} ${SCRIPTS_DIR}/backtest_agent.py`;
         } else if (action === 'stop') {
             command = 'pkill -f train_agent.py || pkill -f backtest_agent.py || true';
